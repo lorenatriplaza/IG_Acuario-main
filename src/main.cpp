@@ -127,7 +127,8 @@ struct Ventilador {
     float anguloAspas;
     float velocidadRotacion;
     float anguloMovimiento; 
-    float radio;            
+    float radio;
+    float anguloRotacionPalo;  // Rotación del palo sobre sí mismo
 };
 
 Ventilador ventilador;
@@ -812,6 +813,12 @@ void actualizarVentilador(float dt)
     if (ventilador.anguloAspas > 360.0f) {
         ventilador.anguloAspas -= 360.0f;
     }
+    
+    // Rotación del palo (más lenta que las aspas)
+    ventilador.anguloRotacionPalo += 90.0f * dt;  // 90 grados por segundo
+    if (ventilador.anguloRotacionPalo > 360.0f) {
+        ventilador.anguloRotacionPalo -= 360.0f;
+    }
 }
 
 // Dibujar ventilador
@@ -827,15 +834,41 @@ void drawVentilador(glm::mat4 P, glm::mat4 V)
     shader.setVec3("uMovingLightColor", movingLightColor);
     shader.setBool("uMovingLightEnabled", movingLightEnabled);
     
-    // Dibujar cubo alargado vertical
+    const float CUBE_HALF = 1.0f;
+
+    const float paloScaleY = 3.0f;   
+    const float baseScaleY = 0.15f;
+    const float paloHeight = 2.0f * CUBE_HALF * paloScaleY; 
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, ventiladorTexture);
+    shader.setInt("uTexture", 0);
+    shader.setBool("useTexture", true);
+
+    // Dibujar base (cubo achatado)
+    glm::mat4 baseMatrix(1.0f);
+    baseMatrix = glm::translate(baseMatrix, ventilador.posicion);
+    baseMatrix = glm::translate(baseMatrix, glm::vec3(0.0f, -baseScaleY * CUBE_HALF, 0.0f)); // bajar "media base"
+    baseMatrix = glm::scale(baseMatrix, glm::vec3(0.9f, baseScaleY, 0.9f));
+
+    shader.setMat4("uPVM", P * V * baseMatrix);
+    shader.setMat4("uModel", baseMatrix);
+    shader.setMat4("uView", V);
+    shader.setVec4("uColor", glm::vec4(0.3f, 0.3f, 0.3f, 1.0f));
+    cubeModel.renderModel(GL_TRIANGLES);
+
+    // Dibujar palo (cubo alargado)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, ventiladorTexture);
     shader.setInt("uTexture", 0);
     shader.setBool("useTexture", true);
     
-    glm::mat4 paloMatrix = glm::mat4(1.0f);
+    glm::mat4 paloMatrix(1.0f);
     paloMatrix = glm::translate(paloMatrix, ventilador.posicion);
-    paloMatrix = glm::scale(paloMatrix, glm::vec3(0.12f, 2.0f, 0.12f));  // Mucho más pequeño
+    paloMatrix = glm::rotate(paloMatrix, glm::radians(ventilador.anguloRotacionPalo), glm::vec3(0.0f, 1.0f, 0.0f));
+    paloMatrix = glm::translate(paloMatrix, glm::vec3(0.0f, paloScaleY * CUBE_HALF, 0.0f)); 
+    paloMatrix = glm::scale(paloMatrix, glm::vec3(0.12f, paloScaleY, 0.12f));
+
     shader.setMat4("uPVM", P * V * paloMatrix);
     shader.setMat4("uModel", paloMatrix);
     shader.setMat4("uView", V);
@@ -848,10 +881,11 @@ void drawVentilador(glm::mat4 P, glm::mat4 V)
     shader.setInt("uTexture", 0);
     shader.setBool("useTexture", true);
     
-    glm::vec3 posEsfera = ventilador.posicion + glm::vec3(0.0f, 2.0f, 0.0f);
     glm::mat4 esferaMatrix = glm::mat4(1.0f);
-    esferaMatrix = glm::translate(esferaMatrix, posEsfera);
-    esferaMatrix = glm::scale(esferaMatrix, glm::vec3(0.25f));  // Mucho más pequeña
+    esferaMatrix = glm::translate(esferaMatrix, ventilador.posicion);
+    esferaMatrix = glm::rotate(esferaMatrix, glm::radians(ventilador.anguloRotacionPalo), glm::vec3(0.0f, 1.0f, 0.0f));  // Girar con el palo
+    esferaMatrix = glm::translate(esferaMatrix, glm::vec3(0.0f, paloHeight, 0.0f));
+    esferaMatrix = glm::scale(esferaMatrix, glm::vec3(0.25f));
     shader.setMat4("uPVM", P * V * esferaMatrix);
     shader.setMat4("uModel", esferaMatrix);
     shader.setMat4("uView", V);
@@ -864,14 +898,17 @@ void drawVentilador(glm::mat4 P, glm::mat4 V)
         float anguloAspa = ventilador.anguloAspas + (i * 72.0f);  // 72 grados entre cada aspa (360/5)
         
         glm::mat4 aspaMatrix = glm::mat4(1.0f);
-        aspaMatrix = glm::translate(aspaMatrix, posEsfera);
+        aspaMatrix = glm::translate(aspaMatrix, ventilador.posicion);
+        aspaMatrix = glm::rotate(aspaMatrix, glm::radians(ventilador.anguloRotacionPalo), glm::vec3(0.0f, 1.0f, 0.0f));  // Girar con el palo
+        aspaMatrix = glm::translate(aspaMatrix, glm::vec3(0.0f, paloHeight, 0.0f));
+    
+        aspaMatrix = glm::rotate(aspaMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        
+        aspaMatrix = glm::rotate(aspaMatrix, glm::radians(ventilador.anguloAspas), glm::vec3(0.0f, 1.0f, 0.0f));
         aspaMatrix = glm::rotate(aspaMatrix, glm::radians(anguloAspa), glm::vec3(0.0f, 1.0f, 0.0f));
-        
-        aspaMatrix = glm::translate(aspaMatrix, glm::vec3(0.6f, 0.0f, 0.0f));  // Más cerca
-        
+        aspaMatrix = glm::translate(aspaMatrix, glm::vec3(0.6f, 0.0f, 0.0f));
         aspaMatrix = glm::rotate(aspaMatrix, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        
-        aspaMatrix = glm::scale(aspaMatrix, glm::vec3(0.15f, 0.8f, 0.15f));  // Aspas mucho más pequeñas
+        aspaMatrix = glm::scale(aspaMatrix, glm::vec3(0.15f, 0.8f, 0.15f));
         
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, ventiladorTexture);
@@ -1223,9 +1260,10 @@ int main()
     // Inicializar ventilador
     ventilador.posicion = glm::vec3(10.0f, -8.8f, -11.5f);  
     ventilador.anguloAspas = 0.0f;
-    ventilador.velocidadRotacion = 180.0f;  
+    ventilador.velocidadRotacion = 360.0f;  // Velocidad de rotación de las aspas (grados/segundo)
     ventilador.anguloMovimiento = 0.0f;     
-    ventilador.radio = 10.0f;               
+    ventilador.radio = 10.0f;
+    ventilador.anguloRotacionPalo = 0.0f;  // Inicializar rotación del palo               
     
     // Generar burbujas iniciales cerca de los peces
     for (int i = 0; i < 15; i++) {
