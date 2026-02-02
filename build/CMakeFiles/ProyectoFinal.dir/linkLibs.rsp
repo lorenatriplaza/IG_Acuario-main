@@ -1,0 +1,1 @@
+  -LC:/IG/libraries/glew/lib  -LC:/IG/libraries/glfw/lib  -LC:/IG/libraries/glm/lib  -LC:/IG/libraries/assimp/lib  -LC:/IG/libraries/freeimage/lib  -lopengl32 -lglu32 -lglew32 -lglfw3 -lassimp -lfreeimage -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 

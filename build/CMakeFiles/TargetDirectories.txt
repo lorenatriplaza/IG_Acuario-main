@@ -1,0 +1,3 @@
+C:/Users/loren/Downloads/IG_Acuario-main (3)/IG_Acuario-main/build/CMakeFiles/ProyectoFinal.dir
+C:/Users/loren/Downloads/IG_Acuario-main (3)/IG_Acuario-main/build/CMakeFiles/edit_cache.dir
+C:/Users/loren/Downloads/IG_Acuario-main (3)/IG_Acuario-main/build/CMakeFiles/rebuild_cache.dir
